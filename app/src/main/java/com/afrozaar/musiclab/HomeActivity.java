@@ -1,6 +1,7 @@
 package com.afrozaar.musiclab;
 
 import android.app.Activity;
+import android.media.MediaPlayer;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
@@ -27,6 +28,8 @@ public class HomeActivity extends ActionBarActivity
      */
     private NavigationDrawerFragment mNavigationDrawerFragment;
 
+    MediaPlayer mediaPlayer;
+
     /**
      * Used to store the last screen title. For use in {@link #restoreActionBar()}.
      */
@@ -51,23 +54,36 @@ public class HomeActivity extends ActionBarActivity
     public void onNavigationDrawerItemSelected(int position) {
         // update the main content by replacing fragments
         FragmentManager fragmentManager = getSupportFragmentManager();
-        fragmentManager.beginTransaction()
-                .replace(R.id.container, PlaceholderFragment.newInstance(position + 1))
-                .commit();
+        switch (position){
+            case 1 :
+                fragmentManager.beginTransaction().replace(R.id.container, LibraryFragment.newInstance()).commit();
+                break;
+            default:
+                fragmentManager.beginTransaction()
+                        .replace(R.id.container, PlaceholderFragment.newInstance(position + 1))
+                        .commit();
+        }
+
+
     }
 
     public void onSectionAttached(int number) {
         switch (number) {
             case 1:
-                mTitle = getString(R.string.title_section1);
+                mTitle = getString(R.string.home);
                 break;
             case 2:
-                mTitle = getString(R.string.title_section2);
+                mTitle = getString(R.string.library);
                 break;
             case 3:
                 mTitle = getString(R.string.title_section3);
                 break;
         }
+    }
+
+    public void setupMusicPlayer()
+    {
+        mediaPlayer = new MediaPlayer();
     }
 
     public void restoreActionBar() {
