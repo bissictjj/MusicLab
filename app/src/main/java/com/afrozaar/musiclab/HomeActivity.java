@@ -56,7 +56,7 @@ public class HomeActivity extends ActionBarActivity
         FragmentManager fragmentManager = getSupportFragmentManager();
         switch (position){
             case 1 :
-                fragmentManager.beginTransaction().replace(R.id.container, LibraryFragment.newInstance()).commit();
+                fragmentManager.beginTransaction().replace(R.id.container, LibraryFragment.newInstance(position + 1)).commit();
                 break;
             default:
                 fragmentManager.beginTransaction()

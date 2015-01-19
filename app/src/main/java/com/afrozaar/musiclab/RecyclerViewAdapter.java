@@ -27,7 +27,8 @@ import java.util.ListIterator;
  */
 public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder> {
 
-    public List<SongData> mSongData = new ArrayList<SongData>();
+    public List<MusicUtils.SongData> mSongData = new ArrayList<MusicUtils.SongData>();
+    Context mContext;
 
     public static class ViewHolder extends RecyclerView.ViewHolder{
         public CardView mCardView;
@@ -45,47 +46,10 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
     }
 
-    public static class SongData{
-         private long mId;
-         private String mTitle;
-
-        public SongData(long id, String title){
-            mId = id;
-            mTitle = title;
-        }
-
-    }
-
-    Context mContext;
-
-    public void setupLibrary() {
-        ContentResolver cR = mContext.getContentResolver();
-        Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        Cursor cursor = cR.query(uri, null, null, null, null);
-
-        if (cursor == null) {
-        } else if (!cursor.moveToFirst()) {
-            Log.d("DEBUG", "no media found on device");
-        } else {
-            Log.d("DEBUG", "Library cursor isnt null");
-            int titleColumn = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media.TITLE);
-            int idColumn = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media._ID);
-            cursor.moveToFirst();
-            while (cursor.moveToNext()) {
-                long thisId = cursor.getLong(idColumn);
-                String thisTitle = cursor.getString(titleColumn);
-                Log.d("DEBUG", "DATA ADDED: " + thisId + " AND " + thisTitle);
-                if(thisTitle != null){
-                    mSongData.add(new SongData(thisId, thisTitle));
-                }
-            }
-        }
-    }
-
     public RecyclerViewAdapter(Context context){
         mContext = context;
-
-
+        MusicUtils mu = new MusicUtils(context);
+        mSongData = mu.getSongData();
     }
 
     @Override
@@ -101,12 +65,19 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     @Override
     public void onBindViewHolder(ViewHolder holder, int position){
         Log.d("DEBUG","onBindHolder");
-        SongData curr = mSongData.get(position);
+        MusicUtils.SongData curr = mSongData.get(position);
         if(curr !=null){
             if(curr.mTitle != null){
                 holder.mTextView.setText(curr.mTitle);
             }
         }
+
+        holder.mCardView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
     }
 
     @Override
@@ -117,4 +88,6 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             return 0;
         }
     }
+
+
 }

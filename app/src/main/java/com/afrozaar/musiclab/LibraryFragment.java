@@ -1,6 +1,7 @@
 package com.afrozaar.musiclab;
 
 
+import android.app.Activity;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -31,8 +32,13 @@ public class LibraryFragment extends Fragment {
     public RecyclerViewAdapter recyclerViewAdapter;
     public RecyclerView.LayoutManager layoutManager;
 
-    public static LibraryFragment newInstance() {
+    private static final String ARG_SECTION_NUMBER = "section_number";
+
+    public static LibraryFragment newInstance(int sectionNumber) {
         LibraryFragment fragment = new LibraryFragment();
+        Bundle args = new Bundle();
+        args.putInt(ARG_SECTION_NUMBER, sectionNumber);
+        fragment.setArguments(args);
 
         return fragment;
     }
@@ -44,8 +50,6 @@ public class LibraryFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
     }
 
     @Override
@@ -58,14 +62,21 @@ public class LibraryFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+//        getActivity().getActionBar().setTitle("Library");
         layoutManager = new GridLayoutManager(getActivity(),3);
         recyclerView = (RecyclerView) view.findViewById(R.id.my_recycler_view);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(layoutManager);
 
         recyclerViewAdapter = new RecyclerViewAdapter(getActivity());
-        recyclerViewAdapter.setupLibrary();
         recyclerView.setAdapter(recyclerViewAdapter);
+    }
+
+    @Override
+    public void onAttach(Activity activity) {
+        super.onAttach(activity);
+        ((HomeActivity) activity).onSectionAttached(
+                getArguments().getInt(ARG_SECTION_NUMBER));
     }
 
 
