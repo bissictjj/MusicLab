@@ -2,6 +2,7 @@ package com.afrozaar.musiclab;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.media.Image;
 import android.net.Uri;
@@ -71,13 +72,6 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
                 holder.mTextView.setText(curr.mTitle);
             }
         }
-
-        holder.mCardView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-            }
-        });
     }
 
     @Override

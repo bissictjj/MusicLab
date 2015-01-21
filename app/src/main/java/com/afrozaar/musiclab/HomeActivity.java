@@ -1,6 +1,9 @@
 package com.afrozaar.musiclab;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.media.AudioManager;
+import android.media.Image;
 import android.media.MediaPlayer;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
@@ -9,6 +12,7 @@ import android.support.v4.app.FragmentManager;
 import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -17,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.support.v4.widget.DrawerLayout;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 
@@ -28,7 +33,11 @@ public class HomeActivity extends ActionBarActivity
      */
     private NavigationDrawerFragment mNavigationDrawerFragment;
 
-    MediaPlayer mediaPlayer;
+    ImageButton mPlay;
+    ImageButton mFastForward;
+    ImageButton mPrevious;
+    ImageButton mNext;
+    ImageButton mRewind;
 
     /**
      * Used to store the last screen title. For use in {@link #restoreActionBar()}.
@@ -40,6 +49,12 @@ public class HomeActivity extends ActionBarActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
+        mPlay = (ImageButton)findViewById(R.id.ib_play);
+        mFastForward = (ImageButton)findViewById(R.id.ib_ff);
+        mPrevious = (ImageButton)findViewById(R.id.ib_previous);
+        mNext = (ImageButton)findViewById(R.id.ib_next);
+        mRewind = (ImageButton)findViewById(R.id.ib_rw);
+
         mNavigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
         mTitle = getTitle();
@@ -48,6 +63,20 @@ public class HomeActivity extends ActionBarActivity
         mNavigationDrawerFragment.setUp(
                 R.id.navigation_drawer,
                 (DrawerLayout) findViewById(R.id.drawer_layout));
+
+        mPlay.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(), MusicService.class);
+                intent.setAction(MusicService.SERVICE_TOGGLE_PLAY);
+                startService(intent);
+
+
+                Log.d("DEBUG","Started Service");
+            }
+        });
+
+
     }
 
     @Override
@@ -79,11 +108,6 @@ public class HomeActivity extends ActionBarActivity
                 mTitle = getString(R.string.title_section3);
                 break;
         }
-    }
-
-    public void setupMusicPlayer()
-    {
-        mediaPlayer = new MediaPlayer();
     }
 
     public void restoreActionBar() {

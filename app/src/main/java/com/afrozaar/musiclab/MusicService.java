@@ -1,11 +1,15 @@
 package com.afrozaar.musiclab;
 
 import android.app.Service;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.net.wifi.WifiManager;
+import android.os.Binder;
+import android.os.Process;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -19,12 +23,13 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Created by jay on 12/23/14.
  */
 public class MusicService extends Service implements
-        MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener,MediaPlayer.OnSeekCompleteListener, MediaPlayer.OnBufferingUpdateListener, MediaPlayer.OnCompletionListener, MediaPlayer.OnInfoListener {
+        MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener,MediaPlayer.OnSeekCompleteListener, MediaPlayer.OnBufferingUpdateListener, MediaPlayer.OnCompletionListener, MediaPlayer.OnInfoListener, AudioManager.OnAudioFocusChangeListener {
 
     private static final String ACTION_PLAY = "com.example.action.PLAY";
 
@@ -64,12 +69,12 @@ public class MusicService extends Service implements
 
     public static final String EXTRA_ERROR = SERVICE_PREFIX + "ERROR";
 
+
     public static enum PLAYBACK_SERVICE_ERROR {Connection, Playback, InvalidPlayable}
 
     private WifiManager.WifiLock wifiLock;
     private int startId;
     private MediaPlayer mMediaPlayer = null;
-    private List<MusicUtils.SongData> playList;
     private TelephonyManager mTelephonyManager;
     private PhoneStateListener mPhoneStateListener;
 
@@ -84,6 +89,22 @@ public class MusicService extends Service implements
     private final static int ERROR_RETRY_COUNT = 3;
     private final static int RETRY_SLEEP_TIME = 30000;
 
+
+
+    private List<MusicUtils.SongData> mPlaylist;
+    private MusicUtils musicUtils;
+
+    private final IBinder mBinder = new LocalBinder();
+    private final Random mGenerator = new Random();
+
+    public class LocalBinder extends Binder{
+        MusicService getService(){
+            //This returns the MusicService so clients can call public methods linked to this class.
+            return MusicService.this;
+        }
+    }
+
+    //This creates a worker thread so that the UI isn't stalled if the music service is taking long to do the work it needs to.
     private Looper serviceLooper;
     private ServiceHandler serviceHandler;
 
@@ -94,17 +115,28 @@ public class MusicService extends Service implements
 
         @Override
         public void handleMessage(Message msg) {
+            Log.d(LOG_TAG,"Handle msg called");
             startId = msg.arg1;
             onHandleIntent((Intent) msg.obj);
         }
     }
 
-    public MusicService(){
+    public MusicService() {
 
     }
 
     @Override
-    public void onCreate (){
+    public void onCreate() {
+        Log.d("DEBUG","OnCreate() in service called " + LOG_TAG);
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        int result = audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN);
+
+        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            //put appropriate msg here
+        }
+        musicUtils = new MusicUtils(getApplicationContext());
+        mPlaylist = musicUtils.getSongData();
         mMediaPlayer = new MediaPlayer();
         mMediaPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
         wifiLock = ((WifiManager) getSystemService(Context.WIFI_SERVICE))
@@ -113,7 +145,7 @@ public class MusicService extends Service implements
         mMediaPlayer.setOnErrorListener(this);
         mMediaPlayer.setOnBufferingUpdateListener(this);
         mMediaPlayer.setOnCompletionListener(this);
-        mMediaPlayer.setOnErrorListener(this);
+        mMediaPlayer.setOnPreparedListener(this);
         mMediaPlayer.setOnInfoListener(this);
         mMediaPlayer.setOnSeekCompleteListener(this);
 
@@ -146,7 +178,7 @@ public class MusicService extends Service implements
         // Register the listener with the telephony manager.
         mTelephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
 
-        HandlerThread thread = new HandlerThread("PlaybackService:WorkerThread");
+        HandlerThread thread = new HandlerThread("MusicService:WorkerThread", Process.THREAD_PRIORITY_BACKGROUND);
         thread.start();
 
         serviceLooper = thread.getLooper();
@@ -161,7 +193,7 @@ public class MusicService extends Service implements
         if (!isPrepared) {
             Log.e(LOG_TAG, "play - not prepared");
             return;
-        }else {
+        } else {
             mMediaPlayer.start();
             mediaPlayerHasStarted = true;
         }
@@ -191,12 +223,12 @@ public class MusicService extends Service implements
     synchronized private void pause() {
         Log.d(LOG_TAG, "pause");
         if (isPrepared) {
-                isPrepared = false;
-                mMediaPlayer.stop();
-            } else {
-                mMediaPlayer.pause();
-            }
+            isPrepared = false;
+            mMediaPlayer.stop();
+        } else {
+            mMediaPlayer.pause();
         }
+    }
 
     synchronized private void stop() {
         Log.d(LOG_TAG, "stop");
@@ -206,28 +238,30 @@ public class MusicService extends Service implements
         }
     }
 
-    private void resumePlaying() {
-            if (isPrepared) {
-                play();
-            } else {
-                Log.d(LOG_TAG, "nothing to resume");
-            }
+    public boolean getPlayState(){
+        return isPlaying();
     }
 
-    public int onStartCommand(Intent intent, int flags, int startId){
-        super.onStartCommand(intent, flags, startId);
-        if(intent.getAction().equals(ACTION_PLAY)){
+    private void resumePlaying() {
+        if (isPrepared) {
+            play();
+        } else {
+            Log.d(LOG_TAG, "nothing to resume");
+        }
+    }
 
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        super.onStartCommand(intent, flags, startId);
             Message message = serviceHandler.obtainMessage();
             message.arg1 = startId;
             message.obj = intent;
             serviceHandler.sendMessage(message);
-        }
         return 0;
     }
 
     @Override
     public void onPrepared(MediaPlayer mp) {
+        Log.d(LOG_TAG, "onPrepared called");
         synchronized (this) {
             if (mMediaPlayer != null) {
                 isPrepared = true;
@@ -238,11 +272,11 @@ public class MusicService extends Service implements
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mBinder;
     }
 
     @Override
-    public void onDestroy(){
+    public void onDestroy() {
         super.onDestroy();
         stop();
         wifiLock.release();
@@ -291,35 +325,45 @@ public class MusicService extends Service implements
 
     }
 
-    protected void onHandleIntent(Intent intent) {
+    protected void onHandleIntent(Intent intent){
         if (intent == null || intent.getAction() == null) {
             Log.d(LOG_TAG, "Null intent received");
             return;
         }
         String action = intent.getAction();
+        long songRequest = intent.getLongExtra("SongId",0);
         Log.d(LOG_TAG, "Playback service action received: " + action);
         currentAction = action;
-        if (action.equals(SERVICE_TOGGLE_PLAY) && isPrepared) {
-            if (isPlaying()) {
-                pause();
-                // Get rid of the toggle intent, since we don't want it redelivered
-                // on restart
-                Intent emptyIntent = new Intent(intent);
-                emptyIntent.setAction("");
-                startService(emptyIntent);
+        if (action.equals(SERVICE_TOGGLE_PLAY)) {
+            if (isPrepared) {
+                if (isPlaying()) {
+                    pause();
+                    // Get rid of the toggle intent, since we don't want it redelivered
+                    // on restart
+                    Intent emptyIntent = new Intent(intent);
+                    emptyIntent.setAction("");
+                    startService(emptyIntent);
+                } else {
+                    Intent emptyIntent = new Intent(intent);
+                    emptyIntent.setAction("");
+                    startService(emptyIntent);
+                    play();
+                }
             } else {
-                ;
 
-                Intent emptyIntent = new Intent(intent);
-                emptyIntent.setAction("");
-                startService(emptyIntent);
+                try {
+                    prepareThenPlay(songRequest, false);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-        } else if (action.equals(SERVICE_RESUME_PLAYING)) {
+        }else if (action.equals(SERVICE_RESUME_PLAYING)) {
             resumePlaying();
         } else if (action.equals(SERVICE_PAUSE)) {
             if (isPlaying()) {
                 pause();
             }
+        }
         /*} else if (action.equals(SERVICE_SEEK_TO)) {
             seekTo(intent.getIntExtra(EXTRA_SEEK_TO, 0));
         } else if (action.equals(SERVICE_PLAY_NEXT)) {
@@ -337,29 +381,60 @@ public class MusicService extends Service implements
                 stopSelfResult(startId);
             }
         }*/
-        }
+
     }
 
-    private void prepareThenPlay(String url, boolean stream)
+    private void prepareThenPlay(long id, boolean stream)
             throws IllegalArgumentException, IllegalStateException, IOException {
         // First, clean up any existing audio.
         stop();
+        String url;
+        Uri currentSong;
+
+        if(id == 0){
+            currentSong = musicUtils.getFirstSongUri();
+        }else{
+            currentSong = musicUtils.getSongUri(id);
+        }
 
         /*if (isPlaylist(url)) {
             new downloadPlaylist().execute(url);
             return;
         }*/
 
-        /*synchronized (this) {
-            Log.d(LOG_TAG, "reset: " + playUrl);
+        synchronized (this) {
+            Log.d(LOG_TAG, "reset: " + currentSong.toString());
             mMediaPlayer.reset();
-            mMediaPlayer.setDataSource(playUrl);
+            mMediaPlayer.setDataSource(getApplicationContext(),currentSong);
             mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            Log.d(LOG_TAG, "Preparing: " + playUrl);
+            Log.d(LOG_TAG, "Preparing: " + currentSong.toString());
             mMediaPlayer.prepareAsync();
             Log.d(LOG_TAG, "Waiting for prepare");
-        }*/
+        }
     }
 
+    @Override
+    public void onAudioFocusChange(int focusChange) {
 
+        switch (focusChange) {
+            case AudioManager.AUDIOFOCUS_GAIN:
+                // resume playback
+                if (mMediaPlayer == null) try {
+                    prepareThenPlay(0, false);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                else if (!mMediaPlayer.isPlaying()) mMediaPlayer.start();
+                mMediaPlayer.setVolume(1.0f, 1.0f);
+                break;
+
+            case AudioManager.AUDIOFOCUS_LOSS:
+                // Lost focus for an unbounded amount of time: stop playback and release media player
+                if (mMediaPlayer.isPlaying()) mMediaPlayer.stop();
+                mMediaPlayer.release();
+                mMediaPlayer = null;
+                break;
+
+        }
+    }
 }

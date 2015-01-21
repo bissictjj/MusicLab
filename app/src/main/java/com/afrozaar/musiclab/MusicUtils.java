@@ -1,6 +1,7 @@
 package com.afrozaar.musiclab;
 
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
@@ -25,10 +26,17 @@ public class MusicUtils {
     public static class SongData{
         long mId;
         String mTitle;
+        String mPath;
+        String mImagePath;
 
         public SongData(long id, String title){
             mId = id;
             mTitle = title;
+            //mPath = path;
+        }
+
+        public long getId(){
+            return mId;
         }
     }
 
@@ -37,24 +45,43 @@ public class MusicUtils {
             ContentResolver cR = mContext.getContentResolver();
             Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
             Cursor cursor = cR.query(uri, null, null, null, null);
-
+            Log.d("DEBUG", "Uri : " + uri.toString());
             if (cursor == null) {
             } else if (!cursor.moveToFirst()) {
                 Log.d("DEBUG", "no media found on device");
             } else {
-                Log.d("DEBUG", "Library cursor isnt null");
                 int titleColumn = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media.TITLE);
                 int idColumn = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media._ID);
+
                 cursor.moveToFirst();
                 while (cursor.moveToNext()) {
                     long thisId = cursor.getLong(idColumn);
                     String thisTitle = cursor.getString(titleColumn);
+                    //String thisPath = cursor.getString(pathColumn);
                     Log.d("DEBUG", "DATA ADDED: " + thisId + " AND " + thisTitle);
                     if (thisTitle != null) {
                         mSongData.add(new SongData(thisId, thisTitle));
                     }
                 }
             }
+        }
+    }
+
+    public Uri getSongUri(long id){
+        Uri contentUri = ContentUris.withAppendedId(
+                android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id);
+        return contentUri;
+
+    }
+
+    public Uri getFirstSongUri(){
+        if(!mSongData.isEmpty()) {
+            long id = (mSongData.get(0)).getId();
+            Uri contentUri = ContentUris.withAppendedId(
+                    android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id);
+            return contentUri;
+        }else{
+            return null;
         }
     }
 
