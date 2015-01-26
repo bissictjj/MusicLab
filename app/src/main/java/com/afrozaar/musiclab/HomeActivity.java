@@ -1,10 +1,13 @@
 package com.afrozaar.musiclab;
 
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.media.AudioManager;
 import android.media.Image;
 import android.media.MediaPlayer;
+import android.os.IBinder;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
@@ -22,7 +25,7 @@ import android.view.ViewGroup;
 import android.support.v4.widget.DrawerLayout;
 import android.widget.ArrayAdapter;
 import android.widget.ImageButton;
-import android.widget.TextView;
+
 
 
 public class HomeActivity extends ActionBarActivity
@@ -38,6 +41,9 @@ public class HomeActivity extends ActionBarActivity
     ImageButton mPrevious;
     ImageButton mNext;
     ImageButton mRewind;
+
+    MusicService mMediaPlayer;
+    boolean mBound = false;
 
     /**
      * Used to store the last screen title. For use in {@link #restoreActionBar()}.
@@ -70,14 +76,46 @@ public class HomeActivity extends ActionBarActivity
                 Intent intent = new Intent(getApplicationContext(), MusicService.class);
                 intent.setAction(MusicService.SERVICE_TOGGLE_PLAY);
                 startService(intent);
-
-
+                //bindService(new Intent(getApplicationContext(),MusicService.class),mConnection,Context.BIND_AUTO_CREATE);
                 Log.d("DEBUG","Started Service");
             }
         });
 
+        mNext.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(), MusicService.class);
+                intent.setAction(MusicService.SERVICE_PLAY_NEXT);
+                startService(intent);
+            }
+        });
 
+        mPrevious.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getApplicationContext(), MusicService.class);
+                intent.setAction(MusicService.SERVICE_PLAY_PREVIOUS);
+                startService(intent);
+            }
+        });
     }
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get MusicService instance
+            MusicService.LocalBinder binder = (MusicService.LocalBinder) service;
+            mMediaPlayer = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
 
     @Override
     public void onNavigationDrawerItemSelected(int position) {

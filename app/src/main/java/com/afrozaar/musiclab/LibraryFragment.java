@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -24,7 +25,7 @@ import android.widget.Toast;
  * Use the {@link LibraryFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class LibraryFragment extends Fragment {
+public class LibraryFragment extends Fragment implements RecyclerViewAdapter.LibItemClickListener {
 
     // TODO: Rename and change types of parameters
     private String mParam1;
@@ -32,6 +33,7 @@ public class LibraryFragment extends Fragment {
     public RecyclerView recyclerView;
     public RecyclerViewAdapter recyclerViewAdapter;
     public RecyclerView.LayoutManager layoutManager;
+
 
     private static final String ARG_SECTION_NUMBER = "section_number";
 
@@ -63,20 +65,15 @@ public class LibraryFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-//        getActivity().getActionBar().setTitle("Library");
-        layoutManager = new GridLayoutManager(getActivity(),3);
+        layoutManager = new GridLayoutManager(getActivity(),2);
         recyclerView = (RecyclerView) view.findViewById(R.id.my_recycler_view);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(layoutManager);
 
         recyclerViewAdapter = new RecyclerViewAdapter(getActivity());
         recyclerView.setAdapter(recyclerViewAdapter);
-        recyclerView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(getActivity(),"View : "+ v.toString(),Toast.LENGTH_SHORT).show();
-            }
-        });
+        recyclerViewAdapter.setLibItemClickListener(this);
+
     }
 
     @Override
@@ -87,4 +84,11 @@ public class LibraryFragment extends Fragment {
     }
 
 
+    @Override
+    public void onItemClicked(int position) {
+        Intent intent = new Intent(getActivity(),MusicService.class);
+        intent.setAction(MusicService.SERVICE_PLAY_SINGLE);
+        intent.putExtra("SongPosition",position);
+        getActivity().startService(intent);
+    }
 }

@@ -42,6 +42,7 @@ public class MusicService extends Service implements
     public static final String SERVICE_UPDATE_NAME = SERVICE_PREFIX + "UPDATE";
     public static final String SERVICE_ERROR_NAME = SERVICE_PREFIX + "ERROR";
 
+    public static final String SERVICE_PREPARE_PLAYER = SERVICE_PREFIX + "PREPARE_PLAYER";
     public static final String SERVICE_PLAY_SINGLE = SERVICE_PREFIX +
             "PLAY_SINGLE";
     public static final String SERVICE_PLAY_ENTRY = SERVICE_PREFIX + "PLAY_ENTRY";
@@ -79,6 +80,7 @@ public class MusicService extends Service implements
     private PhoneStateListener mPhoneStateListener;
 
     private int seekToPosition;
+    private int songPosition = 0;
     private boolean isPrepared = false;
     private boolean isPausedInCall = false;
     private boolean mediaPlayerHasStarted = false;
@@ -213,6 +215,32 @@ public class MusicService extends Service implements
         }
     }
 
+    synchronized private void playNext(){
+        if(isPrepared && (songPosition+1) <= musicUtils.getPlaylistSize()){
+
+            try {
+                songPosition++;
+                prepareThenPlay(musicUtils.getSongId(songPosition),false);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    synchronized private void playPrevious(){
+        if(isPrepared && songPosition > 0){
+            try {
+                songPosition--;
+                prepareThenPlay(musicUtils.getSongId(songPosition),false);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
     synchronized private void seekTo(int pos) {
         if (isPrepared) {
             seekToPosition = 0;
@@ -222,12 +250,13 @@ public class MusicService extends Service implements
 
     synchronized private void pause() {
         Log.d(LOG_TAG, "pause");
-        if (isPrepared) {
+        mMediaPlayer.pause();
+        /*if (isPrepared) {
             isPrepared = false;
             mMediaPlayer.stop();
         } else {
             mMediaPlayer.pause();
-        }
+        }*/
     }
 
     synchronized private void stop() {
@@ -312,7 +341,7 @@ public class MusicService extends Service implements
 
     @Override
     public void onCompletion(MediaPlayer mp) {
-
+        playNext();
     }
 
     @Override
@@ -326,14 +355,18 @@ public class MusicService extends Service implements
     }
 
     protected void onHandleIntent(Intent intent){
+        Log.d(LOG_TAG,"SONG POSITION: "+songPosition);
         if (intent == null || intent.getAction() == null) {
             Log.d(LOG_TAG, "Null intent received");
             return;
         }
         String action = intent.getAction();
-        long songRequest = intent.getLongExtra("SongId",0);
         Log.d(LOG_TAG, "Playback service action received: " + action);
         currentAction = action;
+        if(action.equals(SERVICE_PREPARE_PLAYER))
+        {
+            Log.d(LOG_TAG,"MusicService connection established");
+        }
         if (action.equals(SERVICE_TOGGLE_PLAY)) {
             if (isPrepared) {
                 if (isPlaying()) {
@@ -352,7 +385,7 @@ public class MusicService extends Service implements
             } else {
 
                 try {
-                    prepareThenPlay(songRequest, false);
+                    prepareThenPlay(0, false);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -363,8 +396,7 @@ public class MusicService extends Service implements
             if (isPlaying()) {
                 pause();
             }
-        }
-        /*} else if (action.equals(SERVICE_SEEK_TO)) {
+        } else if (action.equals(SERVICE_SEEK_TO)) {
             seekTo(intent.getIntExtra(EXTRA_SEEK_TO, 0));
         } else if (action.equals(SERVICE_PLAY_NEXT)) {
             seekToPosition = 0;
@@ -372,7 +404,14 @@ public class MusicService extends Service implements
         } else if (action.equals(SERVICE_PLAY_PREVIOUS)) {
             seekToPosition = 0;
             playPrevious();
-        } else if (action.equals(SERVICE_STOP_PLAYBACK)) {
+        }else if(action.equals(SERVICE_PLAY_SINGLE)){
+            long tId = musicUtils.getSongId(intent.getIntExtra("SongPosition",0));
+            try {
+                prepareThenPlay(tId,false);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+         /*else if (action.equals(SERVICE_STOP_PLAYBACK)) {
             stopSelfResult(startId);
         } else if (action.equals(SERVICE_STATUS)) {
             updateProgress();
@@ -381,6 +420,7 @@ public class MusicService extends Service implements
                 stopSelfResult(startId);
             }
         }*/
+        }
 
     }
 
@@ -388,13 +428,14 @@ public class MusicService extends Service implements
             throws IllegalArgumentException, IllegalStateException, IOException {
         // First, clean up any existing audio.
         stop();
-        String url;
         Uri currentSong;
 
         if(id == 0){
-            currentSong = musicUtils.getFirstSongUri();
+            currentSong = musicUtils.getRandomSongUri();
+            songPosition = musicUtils.getCurrSongPosition();
         }else{
             currentSong = musicUtils.getSongUri(id);
+            songPosition = musicUtils.getSongPosition(id);
         }
 
         /*if (isPlaylist(url)) {
