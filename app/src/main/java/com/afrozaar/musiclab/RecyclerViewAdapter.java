@@ -1,15 +1,6 @@
 package com.afrozaar.musiclab;
 
-import android.content.ContentResolver;
 import android.content.Context;
-import android.content.Intent;
-import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.media.Image;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.provider.MediaStore;
-import android.support.annotation.NonNull;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -22,15 +13,9 @@ import android.widget.TextView;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.ImageLoader;
-import com.android.volley.toolbox.NetworkImageView;
-import com.android.volley.toolbox.Volley;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 
 /**
  * Created by jay on 12/19/14.
@@ -44,7 +29,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     private LruCache bitmapCache;
     private int cacheSize = 2 * 1024 * 1024; //2MiB
 
-    private static final String LOG_TAG = MusicService.class.getName();
+    private static final String LOG_TAG = RecyclerViewAdapter.class.getName();
 
     private RequestQueue mRequestQueue;
     private ImageLoader mImageLoader;

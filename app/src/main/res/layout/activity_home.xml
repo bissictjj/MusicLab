@@ -11,15 +11,68 @@
         
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent" android:id="@+id/container"
+            android:layout_height="match_parent"
+            android:id="@+id/container"
             android:layout_above="@+id/ll_musicplayer"/>
+
+        <!--<LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/ll_netconsole"
+            android:background="@android:color/holo_orange_light"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="30dp"
+                android:id="@+id/tv_home_display"
+                android:layout_above="@+id/et_frag_home"
+                android:gravity="center_vertical"/>
+
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:id="@+id/et_frag_home"
+                android:layout_alignParentBottom="true"/>
+            </LinearLayout>-->
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:id="@+id/ll_netconsole"
+            android:layout_width="match_parent"
+            android:layout_height="70dp"
+            android:background="@android:color/holo_red_light"
+            android:layout_above="@+id/ll_musicplayer"
+            android:gravity="center">
+
+            <Button
+                android:layout_width="100dp"
+                android:layout_height="50dp"
+                android:id="@+id/btn_register"
+                android:text="Register"/>
+               <!-- android:layout_gravity="left"
+                android:gravity="left"-->
+
+
+            <Button
+                android:layout_width="100dp"
+                android:layout_height="50dp"
+                android:id="@+id/btn_send"
+                android:text="Send"/>
+                <!--android:layout_gravity="right"
+                android:gravity="right"-->
+
+
+            </LinearLayout>
         
         <LinearLayout
             android:id="@+id/ll_musicplayer"
             android:orientation="horizontal"
             android:layout_alignParentBottom="true"
+
             android:layout_width="match_parent"
-            android:layout_height="70dp"
+            android:layout_height="75dp"
             android:background="@android:color/holo_blue_bright"
             android:gravity="center">
 
@@ -33,24 +86,10 @@
             <ImageButton
                 android:layout_height="50dp"
                 android:layout_width="50dp"
-                android:id="@+id/ib_rw"
-                android:layout_margin="10dp"
-                android:src="@drawable/ic_action_rewind"/>
-
-            <ImageButton
-                android:layout_height="50dp"
-                android:layout_width="50dp"
                 android:id="@+id/ib_play"
                 android:layout_margin="10dp"
                 android:src="@drawable/ic_action_play"
                 />
-
-            <ImageButton
-                android:layout_height="50dp"
-                android:layout_width="50dp"
-                android:id="@+id/ib_ff"
-                android:layout_margin="10dp"
-                android:src="@drawable/ic_action_fast_forward"/>
 
             <ImageButton
                 android:layout_height="50dp"

@@ -1,7 +1,8 @@
 package com.afrozaar.musiclab;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
@@ -9,14 +10,13 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
-import android.os.Process;
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.PowerManager;
+import android.os.Process;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -69,6 +69,10 @@ public class MusicService extends Service implements
     public static final String EXTRA_KEEP_AUDIO_FOCUS = SERVICE_PREFIX + "KEEP_AUDIO_FOCUS";
 
     public static final String EXTRA_ERROR = SERVICE_PREFIX + "ERROR";
+
+    private static final int NOTIFY_ID=1;
+
+    public String songTitle;
 
 
     public static enum PLAYBACK_SERVICE_ERROR {Connection, Playback, InvalidPlayable}
@@ -187,35 +191,52 @@ public class MusicService extends Service implements
         serviceHandler = new ServiceHandler(serviceLooper);
     }
 
-    synchronized private boolean isPlaying() {
+    synchronized public boolean isPlaying() {
         return isPrepared && mMediaPlayer.isPlaying();
     }
 
-    synchronized private void play() {
+    synchronized public void play() {
         if (!isPrepared) {
             Log.e(LOG_TAG, "play - not prepared");
             return;
         } else {
             mMediaPlayer.start();
             mediaPlayerHasStarted = true;
+
+            Intent notIntent = new Intent(this, HomeActivity.class);
+            notIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pendInt = PendingIntent.getActivity(this, 0,
+                    notIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            Notification.Builder builder = new Notification.Builder(this);
+            songTitle = musicUtils.getSongTitle(musicUtils.getCurrSongPosition());
+            builder.setContentIntent(pendInt)
+                   // .setSmallIcon(R.drawable.play)
+                    .setTicker(songTitle)
+                    .setOngoing(true)
+                    .setContentTitle("HELLO")
+            .setContentText(songTitle);
+            Notification not = builder.build();
+
+            startForeground(NOTIFY_ID, not);
         }
     }
 
-    synchronized private int getPosition() {
+    synchronized public int getPosition() {
         if (isPrepared) {
             return mMediaPlayer.getCurrentPosition();
         }
         return 0;
     }
 
-    synchronized private void seekRelative(int pos) {
+    synchronized public void seekRelative(int pos) {
         if (isPrepared) {
             seekToPosition = 0;
             mMediaPlayer.seekTo(mMediaPlayer.getCurrentPosition() + pos);
         }
     }
 
-    synchronized private void playNext(){
+    synchronized public void playNext(){
         if(isPrepared && (songPosition+1) <= musicUtils.getPlaylistSize()){
 
             try {
@@ -228,7 +249,7 @@ public class MusicService extends Service implements
         }
     }
 
-    synchronized private void playPrevious(){
+    synchronized public void playPrevious(){
         if(isPrepared && songPosition > 0){
             try {
                 songPosition--;
@@ -241,14 +262,14 @@ public class MusicService extends Service implements
 
     }
 
-    synchronized private void seekTo(int pos) {
+    synchronized public void seekTo(int pos) {
         if (isPrepared) {
             seekToPosition = 0;
             mMediaPlayer.seekTo(pos);
         }
     }
 
-    synchronized private void pause() {
+    synchronized public void pause() {
         Log.d(LOG_TAG, "pause");
         mMediaPlayer.pause();
         /*if (isPrepared) {
@@ -259,7 +280,7 @@ public class MusicService extends Service implements
         }*/
     }
 
-    synchronized private void stop() {
+    synchronized public void stop() {
         Log.d(LOG_TAG, "stop");
         if (isPrepared) {
             isPrepared = false;
@@ -305,6 +326,13 @@ public class MusicService extends Service implements
     }
 
     @Override
+    public boolean onUnbind(Intent intent){
+        mMediaPlayer.stop();
+        mMediaPlayer.release();
+        return false;
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
         stop();
@@ -325,7 +353,7 @@ public class MusicService extends Service implements
                 mMediaPlayer = null;
             }
         }
-
+        stopForeground(true);
         serviceLooper.quit();
     }
 
@@ -424,7 +452,18 @@ public class MusicService extends Service implements
 
     }
 
-    private void prepareThenPlay(long id, boolean stream)
+    public int getCurrentPos()
+    {
+        return mMediaPlayer.getCurrentPosition();
+    }
+
+    public int getDur()
+    {
+        return mMediaPlayer.getDuration();
+
+    }
+
+    public void prepareThenPlay(long id, boolean stream)
             throws IllegalArgumentException, IllegalStateException, IOException {
         // First, clean up any existing audio.
         stop();
