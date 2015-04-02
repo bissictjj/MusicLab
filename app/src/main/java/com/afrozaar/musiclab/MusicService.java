@@ -389,6 +389,7 @@ public class MusicService extends Service implements
             return;
         }
         String action = intent.getAction();
+
         Log.d(LOG_TAG, "Playback service action received: " + action);
         currentAction = action;
         if(action.equals(SERVICE_PREPARE_PLAYER))
@@ -433,7 +434,15 @@ public class MusicService extends Service implements
             seekToPosition = 0;
             playPrevious();
         }else if(action.equals(SERVICE_PLAY_SINGLE)){
-            long tId = musicUtils.getSongId(intent.getIntExtra("SongPosition",0));
+            long tId;
+
+            if(intent.getLongExtra("SongId",0) != 0){
+                 tId = intent.getLongExtra("SongId",0);
+            }else{
+                 tId = musicUtils.getSongId(intent.getIntExtra("SongPosition",0));
+            }
+
+
             try {
                 prepareThenPlay(tId,false);
             } catch (IOException e) {
@@ -510,11 +519,13 @@ public class MusicService extends Service implements
 
             case AudioManager.AUDIOFOCUS_LOSS:
                 // Lost focus for an unbounded amount of time: stop playback and release media player
-                if (mMediaPlayer.isPlaying()) mMediaPlayer.stop();
-                mMediaPlayer.release();
-                mMediaPlayer = null;
-                break;
-
+                if(mMediaPlayer != null) {
+                    if (mMediaPlayer.isPlaying()) mMediaPlayer.stop();
+                    mMediaPlayer.release();
+                    mMediaPlayer = null;
+                    break;
+                }
+            break;
         }
     }
 }

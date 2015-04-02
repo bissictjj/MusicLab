@@ -1,6 +1,9 @@
-package com.afrozaar.musiclab;
+package com.afrozaar.musiclab.adapters;
 
 import android.content.Context;
+import android.content.Intent;
+import android.support.v4.app.DialogFragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -11,6 +14,10 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.afrozaar.musiclab.MusicService;
+import com.afrozaar.musiclab.MusicUtils;
+import com.afrozaar.musiclab.R;
+import com.afrozaar.musiclab.dialogs.SongOptionsDialogFragment;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.ImageLoader;
 
@@ -50,11 +57,19 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
     }
 
+    public void setSongData(List<MusicUtils.SongData> s){
+        if(s == null){
+            mSongData = mu.getSongData();
+        }else {
+            mSongData = s;
+            notifyDataSetChanged();
+        }
+    }
+
     public RecyclerViewAdapter(Context context){
         mContext = context;
         mu = new MusicUtils(context);
 
-        mSongData = mu.getSongData();
 
     }
 
@@ -71,14 +86,14 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     @Override
     public void onBindViewHolder(ViewHolder holder, final int position){
         Log.d(LOG_TAG,"onBindHolder");
-        MusicUtils.SongData curr = mSongData.get(position);
+        final MusicUtils.SongData curr = mSongData.get(position);
         holder.mImageView.setImageDrawable(null);
         if(curr !=null){
-            if(curr.mTitle != null){
-                holder.mTextView.setText(curr.mTitle);
-                Log.d(LOG_TAG,"Image Uri : "+mu.getAlbumArt(curr.mAlbumArtId));
-                if(mu.getAlbumArt(curr.mAlbumArtId) != null) {
-                    holder.mImageView.setImageURI(mu.getAlbumArt(curr.mAlbumArtId));
+            if(curr.getTitle() != null){
+                holder.mTextView.setText(curr.getTitle());
+                Log.d(LOG_TAG,"Image Uri : "+mu.getAlbumArt(curr.getAlbumArtId()));
+                if(mu.getAlbumArt(curr.getAlbumArtId()) != null) {
+                    holder.mImageView.setImageURI(mu.getAlbumArt(curr.getAlbumArtId()));
                 }else{
                     holder.mImageView.setImageResource(R.drawable.ic_launcher);
                 }
@@ -87,7 +102,20 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         holder.mCardView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mLibItemClickListener.onItemClicked(position);
+                Intent intent = new Intent(mContext,MusicService.class);
+                intent.setAction(MusicService.SERVICE_PLAY_SINGLE);
+                intent.putExtra("SongId", curr.getId());
+                Log.d(LOG_TAG,"SongId :" + curr.getId());
+                mContext.startService(intent);
+                //mLibItemClickListener.onItemClicked(position);
+            }
+        });
+        holder.mCardView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                DialogFragment frag = SongOptionsDialogFragment.newInstance(curr.getId());
+                frag.show(((FragmentActivity)mContext).getSupportFragmentManager(),"song_options");
+                return true;
             }
         });
     }

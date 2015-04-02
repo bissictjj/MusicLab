@@ -1,13 +1,22 @@
-package com.afrozaar.musiclab;
+package com.afrozaar.musiclab.fragments;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ExpandableListView;
+import android.widget.Toast;
+
+import com.afrozaar.musiclab.HomeActivity;
+import com.afrozaar.musiclab.MusicUtils;
+import com.afrozaar.musiclab.adapters.MyExListAdapter;
+import com.afrozaar.musiclab.dialogs.NewPlaylistDialogFragment;
+import com.afrozaar.musiclab.R;
+import com.melnykov.fab.FloatingActionButton;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,7 +25,7 @@ import java.util.List;
 /**
  * Created by jay on 3/20/15.
  */
-public class PlaylistFragment extends Fragment {
+public class PlaylistFragment extends Fragment implements NewPlaylistDialogFragment.NewPlaylistAddedListener{
 
     private Activity activity;
     MyExListAdapter exListAdapter;
@@ -27,6 +36,7 @@ public class PlaylistFragment extends Fragment {
     private static final String TAG = PlaylistFragment.class.getName();
     MusicUtils mUtils;
     private List<MusicUtils.PlaylistData> mPlaylistDataList;
+    private FloatingActionButton btnAddNewPlaylist;
 
     public static PlaylistFragment newInstance(int sectionNumber){
         PlaylistFragment frag = new PlaylistFragment();
@@ -64,12 +74,23 @@ public class PlaylistFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        mUtils = new MusicUtils(activity);
-        mPlaylistDataList = mUtils.getPlaylistData();
+
         prepareListData();
 
         Log.d(TAG, "OnViewCreated()");
+        btnAddNewPlaylist = (FloatingActionButton)view.findViewById(R.id.btnAddPlaylist);
         exListView = (ExpandableListView)view.findViewById(R.id.playlist_exlistview);
+        final PlaylistFragment frag1 = this;
+        btnAddNewPlaylist.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DialogFragment frag = new NewPlaylistDialogFragment();
+                frag.setTargetFragment(frag1,0);
+                frag.show(getActivity().getSupportFragmentManager(),"create_playlist");
+            }
+        });
+
+        //btnAddNewPlaylist.attachToListView(exListView);
 
         Log.d(TAG, "mHeaderList size : " + mHeaderList.size());
         //Log.d(TAG, "mDataList size : " + mDataList.size());
@@ -80,6 +101,9 @@ public class PlaylistFragment extends Fragment {
 
     private void prepareListData() {
         Log.d(TAG,"prepareListData");
+        mUtils = new MusicUtils(getActivity());
+        mPlaylistDataList = mUtils.getPlaylistData();
+
         mHeaderList = new ArrayList<String>();
         mPlaylistHashMap = new HashMap<String, List<String>>();
         for(int i = 0; i < mPlaylistDataList.size(); i++){
@@ -123,4 +147,14 @@ public class PlaylistFragment extends Fragment {
         mDataList.put(mHeaderList.get(2), comingSoon);*/
     }
 
+    @Override
+    public void onPositiveButtonClicked() {
+        prepareListData();
+
+        exListAdapter = null;
+        exListAdapter = new MyExListAdapter(getActivity(), mHeaderList, mPlaylistHashMap);
+        exListView.setAdapter(exListAdapter);
+        //exListAdapter.notifyDataSetChanged();
+        Toast.makeText(getActivity(),"CALLBACK WORKED",Toast.LENGTH_LONG).show();
+    }
 }

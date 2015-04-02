@@ -1,4 +1,4 @@
-package com.afrozaar.musiclab;
+package com.afrozaar.musiclab.adapters;
 
 import android.app.Activity;
 import android.content.Context;
@@ -8,7 +8,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.afrozaar.musiclab.MusicUtils;
+import com.afrozaar.musiclab.R;
 
 import java.util.HashMap;
 import java.util.List;
@@ -32,7 +36,7 @@ public class MyExListAdapter extends BaseExpandableListAdapter {
         this.mHeaderTitles = titles;
         //this.mPlaylistList = p;
         this.mPlaylistHashMap = pIDs;
-
+        mPlaylistList = (new MusicUtils(context)).getPlaylistData();
     }
 
     @Override
@@ -100,8 +104,10 @@ public class MyExListAdapter extends BaseExpandableListAdapter {
             //LayoutInflater mInflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             convertView = mInflater.inflate(R.layout.item_playlist,null);
         }
-
+        MusicUtils.SongData temp = mPlaylistList.get(groupPosition).getSongAt(childPosition);
         TextView txtListChild = (TextView)convertView.findViewById(R.id.tv_playlist_item);
+        ImageView imgListChild = (ImageView)convertView.findViewById(R.id.iv_playlist_item);
+        imgListChild.setImageURI(mPlaylistList.get(groupPosition).getAlbumArt(temp.getAlbumArtId()));
         txtListChild.setText(childText);
         return convertView;
     }

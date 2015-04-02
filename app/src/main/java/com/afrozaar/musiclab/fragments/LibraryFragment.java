@@ -1,8 +1,7 @@
-package com.afrozaar.musiclab;
+package com.afrozaar.musiclab.fragments;
 
 
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
@@ -11,13 +10,17 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.afrozaar.musiclab.HomeActivity;
+import com.afrozaar.musiclab.R;
+import com.afrozaar.musiclab.adapters.RecyclerViewAdapter;
+
 
 /**
  * A simple {@link Fragment} subclass.
  * Use the {@link LibraryFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class LibraryFragment extends Fragment implements RecyclerViewAdapter.LibItemClickListener {
+public class LibraryFragment extends Fragment {
 
     // TODO: Rename and change types of parameters
     private String mParam1;
@@ -64,8 +67,9 @@ public class LibraryFragment extends Fragment implements RecyclerViewAdapter.Lib
         recyclerView.setLayoutManager(layoutManager);
 
         recyclerViewAdapter = new RecyclerViewAdapter(getActivity());
+        recyclerViewAdapter.setSongData(null);
         recyclerView.setAdapter(recyclerViewAdapter);
-        recyclerViewAdapter.setLibItemClickListener(this);
+        //recyclerViewAdapter.setLibItemClickListener(this);
 
     }
 
@@ -77,11 +81,11 @@ public class LibraryFragment extends Fragment implements RecyclerViewAdapter.Lib
     }
 
 
-    @Override
+    /*@Override
     public void onItemClicked(int position) {
         Intent intent = new Intent(getActivity(),MusicService.class);
         intent.setAction(MusicService.SERVICE_PLAY_SINGLE);
         intent.putExtra("SongPosition",position);
         getActivity().startService(intent);
-    }
+    }*/
 }

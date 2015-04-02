@@ -15,6 +15,17 @@
             android:id="@+id/container"
             android:layout_above="@+id/ll_musicplayer"/>
 
+        <android.support.v7.widget.RecyclerView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/mainrecyclerview"
+            android:layout_above="@+id/ll_musicplayer"
+            />
+
+
+
+
+
         <!--<LinearLayout
             android:orientation="vertical"
             android:layout_width="match_parent"
@@ -112,7 +123,7 @@
          the container. -->
     <fragment android:id="@+id/navigation_drawer"
         android:layout_width="@dimen/navigation_drawer_width" android:layout_height="match_parent"
-        android:layout_gravity="start" android:name="com.afrozaar.musiclab.NavigationDrawerFragment"
+        android:layout_gravity="start" android:name="com.afrozaar.musiclab.fragments.NavigationDrawerFragment"
         tools:layout="@layout/fragment_navigation_drawer" />
 
 </android.support.v4.widget.DrawerLayout>

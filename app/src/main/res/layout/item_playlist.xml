@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+<android.support.v7.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:card="http://schemas.android.com/apk/res-auto"
+     android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:background="#ffffff"
+    card:cardElevation="4dp"
+    card:cardCornerRadius="4dp"
+    android:paddingLeft="5dp"
+    android:paddingRight="5dp">
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent">
 
     <TextView
         android:id="@+id/tv_playlist_item"
@@ -10,6 +21,7 @@
         android:layout_alignParentLeft="true"
         android:layout_centerVertical="true"
         android:text="TestItem"
+        android:layout_marginLeft="5dp"
         style="@style/TextAppearance.AppCompat.Large"/>
 
     <ImageView
@@ -19,7 +31,10 @@
         android:src="@drawable/common_ic_googleplayservices"
         android:scaleType="centerCrop"
         android:layout_alignParentRight="true"
-        android:layout_centerVertical="true"/>
+        android:layout_centerVertical="true"
+        android:layout_margin="5dp"/>
+
+    </RelativeLayout>
 
 
-</RelativeLayout>
+</android.support.v7.widget.CardView>

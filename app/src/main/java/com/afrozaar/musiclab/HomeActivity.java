@@ -1,6 +1,7 @@
 package com.afrozaar.musiclab;
 
 import android.app.Activity;
+import android.app.SearchManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -8,15 +9,24 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.net.nsd.NsdManager;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -24,16 +34,22 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.afrozaar.musiclab.adapters.RecyclerViewAdapter;
+import com.afrozaar.musiclab.fragments.LibraryFragment;
+import com.afrozaar.musiclab.fragments.NavigationDrawerFragment;
+import com.afrozaar.musiclab.fragments.PlaylistFragment;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class HomeActivity extends ActionBarActivity
@@ -46,23 +62,20 @@ public class HomeActivity extends ActionBarActivity
     private Intent playIntent;
 
     ImageButton mPlay;
-    ImageButton mFastForward;
     ImageButton mPrevious;
     LinearLayout mMusicSection;
     LinearLayout mNetConsole;
     ImageButton mNext;
-    ImageButton mRewind;
-    EditText mEditText;
     TextView mDisplay;
     Button mRegister;
     Button mSendMsg;
-
-    NsdManager mNsdManager;
-
-    MusicController mController;
     MusicService mMediaPlayer;
     GoogleCloudMessaging gcm;
     String regId;
+
+    public RecyclerView mSearchResults;
+    public RecyclerViewAdapter recyclerViewAdapter;
+    public RecyclerView.LayoutManager layoutManager;
 
     boolean mBound = false;
 
@@ -83,6 +96,10 @@ public class HomeActivity extends ActionBarActivity
     static final String TAG = "GCMDemo";
 
     private static final String LOG_TAG = MusicService.class.getName();
+
+    private final int MUSIC_QUERY_LOADER = 0;
+
+    private final String QUERY_KEY = "music_query";
 
     /**
      * Used to store the last screen title. For use in {@link #restoreActionBar()}.
@@ -106,9 +123,12 @@ public class HomeActivity extends ActionBarActivity
         //mMusicSection.setVisibility(View.GONE);
         mNetConsole.setVisibility(View.GONE);
 
-
-
-
+        mSearchResults = (RecyclerView)findViewById(R.id.mainrecyclerview);
+        recyclerViewAdapter = new RecyclerViewAdapter(this);
+        layoutManager = new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false);
+        mSearchResults.setHasFixedSize(true);
+        mSearchResults.setLayoutManager(layoutManager);
+        mSearchResults.setVisibility(View.GONE);
         mNavigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
         mTitle = getTitle();
@@ -373,13 +393,13 @@ public class HomeActivity extends ActionBarActivity
     public void onNavigationDrawerItemSelected(int position) {
         // update the main content by replacing fragments
         FragmentManager fragmentManager = getSupportFragmentManager();
-        Log.d(TAG,"Position called : " + position);
+        Log.d(TAG, "Position called : " + position);
         switch (position){
             case 1 :
                 fragmentManager.beginTransaction().replace(R.id.container, LibraryFragment.newInstance(position + 1)).commit();
                 break;
             case 2 :
-                fragmentManager.beginTransaction().replace(R.id.container,PlaylistFragment.newInstance(position+1)).commit();
+                fragmentManager.beginTransaction().replace(R.id.container, PlaylistFragment.newInstance(position + 1)).commit();
                 break;
             default:
                 fragmentManager.beginTransaction()
@@ -409,6 +429,8 @@ public class HomeActivity extends ActionBarActivity
         actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
         actionBar.setDisplayShowTitleEnabled(true);
         actionBar.setTitle(mTitle);
+        //actionBar.setDisplayOptions(ActionBar.DISPLAY_USE_LOGO);
+
     }
 
 
@@ -420,6 +442,28 @@ public class HomeActivity extends ActionBarActivity
             // decide what to show in the action bar.
             getMenuInflater().inflate(R.menu.home, menu);
             restoreActionBar();
+
+            // Associate searchable configuration with the SearchView
+            SearchManager searchManager =
+                    (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+            MenuItem m = menu.findItem(R.id.search);
+            SearchView searchView =
+                    (SearchView) m.getActionView();
+            searchView.setSearchableInfo(
+                    searchManager.getSearchableInfo(getComponentName()));
+
+            MenuItemCompat.setOnActionExpandListener(m, new MenuItemCompat.OnActionExpandListener() {
+                @Override
+                public boolean onMenuItemActionExpand(MenuItem item) {
+                    return true;
+                }
+
+                @Override
+                public boolean onMenuItemActionCollapse(MenuItem item) {
+                    mSearchResults.setVisibility(View.GONE);
+                    return true;
+                }
+            });
             return true;
         }
         return super.onCreateOptionsMenu(menu);
@@ -439,6 +483,98 @@ public class HomeActivity extends ActionBarActivity
 
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        handleIntent(intent);
+    }
+
+    /**
+     * Assuming this activity was started with a new intent, process the incoming information and
+     * react accordingly.
+     * @param intent
+     */
+    private void handleIntent(Intent intent) {
+        // Special processing of the incoming intent only occurs if the if the action specified
+        // by the intent is ACTION_SEARCH.
+        if (Intent.ACTION_SEARCH.equals(intent.getAction())) {
+            // SearchManager.QUERY is the key that a SearchManager will use to send a query string
+            // to an Activity.
+
+            if(intent.getStringExtra(SearchManager.ACTION_MSG) != null){
+                Toast.makeText(this,"WHAT : "+ intent.getStringExtra(SearchManager.ACTION_MSG),Toast.LENGTH_LONG).show();
+            }
+            String query = intent.getStringExtra(SearchManager.QUERY);
+
+
+            // We need to create a bundle containing the query string to send along to the
+            // LoaderManager, which will be handling querying the database and returning results.
+            Bundle bundle = new Bundle();
+            bundle.putString(QUERY_KEY, query);
+
+            //MusicSearchLoaderCallbacks loaderCallbacks = new MusicSearchLoaderCallbacks(this);
+
+            // Start the loader with the new query, and an object that will handle all callbacks.
+            getSupportLoaderManager().restartLoader(MUSIC_QUERY_LOADER, bundle,searchQueryLoader);
+
+        }
+    }
+
+    LoaderManager.LoaderCallbacks<Cursor> searchQueryLoader = new LoaderManager.LoaderCallbacks<Cursor>() {
+
+        public static final String QUERY_KEY = "music_query";
+
+        private List<MusicUtils.SongData> mSongDataList;
+
+        @Override
+        public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+            String query = args.getString(QUERY_KEY);
+        /*Uri uri = Uri.withAppendedPath(
+                MediaStore.Audio.Artists.EXTERNAL_CONTENT_URI, query);*/
+
+            Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+
+            String selection = MediaStore.Audio.Media.ARTIST + " LIKE '%" + query.trim() + "%'";
+
+            String sortBy = MediaStore.Audio.Media.ARTIST;
+
+            return new CursorLoader(mContext, uri, null,selection,null,sortBy);
+        }
+
+        @Override
+        public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+            mSongDataList = new ArrayList<>();
+            mSongDataList.clear();
+            recyclerViewAdapter.notifyDataSetChanged();
+            if(cursor.getCount() == 0){
+                return;
+            }
+
+            cursor.moveToFirst();
+            int artistNameIndex = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST);
+            int artistIDIndex = cursor.getColumnIndex(MediaStore.Audio.Media._ID);
+            int artistAlbumIndex = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID);
+            int artistTitleIndex = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE);
+
+            do{
+                //Log.d(TAG,"\nArtist : "+ cursor.getString(artistNameIndex) + "\nArtistID : "+cursor.getInt(artistIDIndex) + "\nNum of tracks : "+cursor.getInt(artistAlbumIndex));
+                mSongDataList.add(new MusicUtils.SongData(cursor.getInt(artistIDIndex),cursor.getString(artistTitleIndex),MusicUtils.getSongUri(cursor.getLong(artistIDIndex)),cursor.getLong(artistAlbumIndex)));
+            }while (cursor.moveToNext());
+            if(mSongDataList.size() == 0){
+                mSearchResults.setVisibility(View.GONE);
+            }else {
+                mSearchResults.setVisibility(View.VISIBLE);
+                recyclerViewAdapter.setSongData(mSongDataList);
+            }
+            mSearchResults.setAdapter(recyclerViewAdapter);
+
+        }
+
+        @Override
+        public void onLoaderReset(Loader<Cursor> loader) {
+
+        }
+    };
 
     //################################## ######################  ####################################
     /**

@@ -2,6 +2,7 @@ package com.afrozaar.musiclab;
 
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -50,6 +51,8 @@ public class MusicUtils {
             return mId;
         }
 
+        public long getAlbumArtId(){return mAlbumArtId;}
+
         public String getTitle(){return mTitle;}
     }
 
@@ -72,6 +75,11 @@ public class MusicUtils {
 
         public String getTitle() {
             return pTitle;
+        }
+
+        public SongData getSongAt(int position){
+            SongData temp = pSongs.get(position);
+            return temp;
         }
 
         private void setupPlaylistSongs(){
@@ -97,7 +105,7 @@ public class MusicUtils {
                     int idColumn = cursor.getColumnIndex(android.provider.MediaStore.Audio.Playlists.Members._ID);
                     int imgColumn = cursor.getColumnIndex(MediaStore.Audio.Playlists.Members.ALBUM_ID);
                     cursor.moveToFirst();
-                    while (cursor.moveToNext()) {
+                    do {
                         long thisId = cursor.getLong(idColumn);
                         String thisTitle = cursor.getString(titleColumn);
                         long thisArtId = cursor.getLong(imgColumn);
@@ -106,7 +114,7 @@ public class MusicUtils {
                             Log.d(LOG_TAG, "Song Title: "+thisTitle);
                             pSongs.add(new SongData(thisId, thisTitle, thisUri,thisArtId));
                         }
-                    }
+                    }while (cursor.moveToNext());
                 }
             }
 
@@ -117,6 +125,12 @@ public class MusicUtils {
                     android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id);
             return contentUri;
 
+        }
+
+        public Uri getAlbumArt(long id){
+            Uri contentUri = ContentUris.withAppendedId(
+                    Uri.parse("content://media/external/audio/albumart"), id);
+            return contentUri;
         }
 
         public List<Long> getPlaylistSongIds(){
@@ -156,7 +170,7 @@ public class MusicUtils {
                     long thisId = cursor.getLong(idColumn);
                     String thisTitle = cursor.getString(titleColumn);
                     long thisArtId = cursor.getLong(imgColumn);
-                    Uri thisUri = getSongUri(thisId);
+                    Uri thisUri = MusicUtils.getSongUri(thisId);
                     if (thisTitle != null) {
                         mSongData.add(new SongData(thisId, thisTitle, thisUri,thisArtId));
                         mPosIdList.add(thisId);
@@ -166,7 +180,7 @@ public class MusicUtils {
         }
     }
 
-    public Uri getSongUri(long id){
+    public static Uri getSongUri(long id){
         Uri contentUri = ContentUris.withAppendedId(
                 android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id);
         return contentUri;
@@ -278,4 +292,62 @@ public class MusicUtils {
         return mPlaylistData;
     }
 
+    public static void createPlaylist(ContentResolver cR, String pName){
+        Uri uri = MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI;
+        ContentValues val = new ContentValues();
+        val.put(MediaStore.Audio.Playlists.NAME, pName);
+        Uri newUri = cR.insert(uri, val);
+        Cursor cur = cR.query(newUri, null, null, null, null);
+        cur.moveToFirst();
+        long plId = cur.getLong(cur.getColumnIndex(MediaStore.Audio.Playlists._ID));
+        uri = MediaStore.Audio.Playlists.Members.getContentUri("external",plId);
+        /*Cursor curCheck = cR.query(uri,null,null,null,null);
+        String nameCheck = curCheck.getString(curCheck.getColumnIndex(MediaStore.Audio.Playlists.Members.))*/
+        ContentValues val2 = new ContentValues();
+        val2.put(MediaStore.Audio.Playlists.Members.PLAY_ORDER,Integer.valueOf(0));
+        cR.insert(uri,val2);
+        cur.close();
+
+    }
+
+    public static void addSongToPlaylist(ContentResolver cR, long songId, long playlistId){
+        Uri uri = MediaStore.Audio.Playlists.Members.getContentUri("external", playlistId);
+        Log.d(LOG_TAG, "playListId: " + playlistId);
+        Cursor cur = cR.query(uri, null, null, null, null);
+        int base = 0;
+        if(cur.getCount() >0 ) {
+            cur.moveToFirst();
+
+            int playOrderIndex = cur.getColumnIndex(MediaStore.Audio.Playlists.Members.PLAY_ORDER);
+            Log.d(LOG_TAG, "playOrderIndex: " + playOrderIndex);
+            base = cur.getInt(playOrderIndex);
+            cur.close();
+
+        }
+        ContentValues val = new ContentValues();
+        //Log.d(LOG_TAG,"base results: " +base);
+        val.put(MediaStore.Audio.Playlists.Members.PLAY_ORDER, Integer.valueOf(base +1));
+        val.put(MediaStore.Audio.Playlists.Members.AUDIO_ID, songId);
+        cR.insert(uri, val);
+    }
+
+    public static void deletePlaylist(ContentResolver cR, long playlistId){
+        Uri uri = MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI;
+        cR.delete(uri, MediaStore.Audio.Playlists._ID + "= '" + playlistId + "'", null);
+
+    }
+
+    public static void deleteSongFromPlaylist(ContentResolver cR, long songId, long playlistId){
+        Uri uri = MediaStore.Audio.Playlists.Members.getContentUri("external", playlistId);
+        cR.delete(uri,MediaStore.Audio.Playlists.Members.AUDIO_ID + "= '"+songId+"'",null);
+
+    }
+
+    public static void deleteSong(ContentResolver cR, long songId){
+
+    }
+
+    public static void getSongInfo(ContentResolver cR, long songId){
+
+    }
 }

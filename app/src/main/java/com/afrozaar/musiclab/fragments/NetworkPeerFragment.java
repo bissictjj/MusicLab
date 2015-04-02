@@ -1,4 +1,4 @@
-package com.afrozaar.musiclab;
+package com.afrozaar.musiclab.fragments;
 
 import android.app.Fragment;
 
